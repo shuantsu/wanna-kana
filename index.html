@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japan-ez-ez</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            outline: 0;
+            border: 0;
+            font-size: 18pt;
+        }
+        button, select {
+            border: 1px solid rgb(177, 177, 177);
+            padding: 10px;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: monospace;
+            margin: 10px;
+        }
+        .kana-row {
+            display: flex;
+        }
+        .kana-cell {
+            background: #cfcfcf;
+            margin: 1px;
+            flex: 1;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer
+        }
+        .kana-cell.active {
+            background:rgb(34, 93, 255);
+            color: white;
+        }
+        
+        [type=checkbox] {
+            cursor: pointer;
+        }
+        #options {
+            padding: 10px;
+            border: 1px solid;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .buttons-wrapper {
+            display: flex;
+            gap: 12px;
+        }
+        .buttons-wrapper button {
+            flex: 1;
+        }
+        #table-container.romaji .romaji {
+            display: inline-block;
+        }
+        #table-container.romaji .hiragana {
+            display: none;
+        }
+        #table-container.romaji .katakana {
+            display: none;
+        }
+
+        #table-container.katakana .romaji {
+            display: none;
+        }
+        #table-container.katakana .hiragana {
+            display: none;
+        }
+        #table-container.katakana .katakana {
+            display: inline-block;
+        }
+
+        #table-container.hiragana .romaji {
+            display: none;
+        }
+        #table-container.hiragana .katakana {
+            display: none;
+        }
+        #table-container.hiragana .hiragana {
+            display: inline-block;
+        }
+        #table-container.kana .romaji {
+            display: none;
+        }
+        #table-container.kana .katakana {
+            display: inline-block;
+        }
+        #table-container.kana .hiragana {
+            display: inline-block;
+        }
+        .hide {
+            display: none!important;
+        }
+        #input {
+            border: 1px dashed darkslateblue;
+            display: block;
+            height: auto;
+            width: 100%;
+            font-size: 22pt;
+        }
+        #root {
+            width: 600px;
+        }
+        #staging-word {
+            text-align: center;
+            font-size: 72pt;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div id="options">
+            <select id="alphabet">
+                <option value="0">Romaji</option>
+                <option value="2">Hiragana</option>
+                <option value="1">Katakana</option>
+                <!--<option value="3">Kana</option>-->
+            </select>
+            <div class="buttons-wrapper">
+                <button onclick="tableUtils.showAll()">Todos</button>
+                <button onclick="tableUtils.hideAll()">Nenhum</button>
+            </div>
+            <div id="table-container" class="romaji">
+            </div>
+            <div class="buttons-wrapper">
+                <button onclick="new game()">Treinar!</button>
+            </div>
+        </div>
+        <div id="root" class="hide">
+            <div id="staging-word"></div>
+            <input id="input" />
+            <br/>
+            <div class="buttons-wrapper">
+                <button onclick="endGame()">Parar</button>
+                <button onclick="commit()">Enviar</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const input = document.getElementById('input');
+        const root = document.getElementById('root');
+        const options = document.getElementById('options');
+        const table = document.getElementById('table-container');
+        const select = document.getElementById('alphabet');
+        const stagingWord = document.getElementById('staging-word');
+        let queue = [];
+
+        function shuffle(array) {
+            var indice_atual = array.length, valor_temporario, indice_aleatorio;
+        
+            while (0 !== indice_atual) {
+        
+                indice_aleatorio = Math.floor(Math.random() * indice_atual);
+                indice_atual -= 1;
+        
+                valor_temporario = array[indice_atual];
+                array[indice_atual] = array[indice_aleatorio];
+                array[indice_aleatorio] = valor_temporario;
+            }
+        
+            return array;
+        }
+
+        const kana = [[['a', 'ア', 'あ'], ['i', 'イ', 'い'], ['u', 'ウ', 'う'], ['e', 'エ', 'え'], ['o', 'オ', 'お']], [['ka', 'カ', 'か'], ['ki', 'キ', 'き'], ['ku', 'ク', 'く'], ['ke', 'ケ', 'け'], ['ko', 'コ', 'こ']], [['ga', 'ガ', 'が'], ['gi', 'ギ', 'ぎ'], ['gu', 'グ', 'ぐ'], ['ge', 'ゲ', 'げ'], ['go', 'ゴ', 'ご']], [['sa', 'サ', 'さ'], ['shi', 'シ', 'し'], ['su', 'ス', 'す'], ['se', 'セ', 'せ'], ['so', 'ソ', 'そ']], [['za', 'ザ', 'ざ'], ['ji', 'ジ', 'じ'], ['zu', 'ズ', 'ず'], ['ze', 'ゼ', 'ぜ'], ['zo', 'ゾ', 'ぞ']], [['ta', 'タ', 'た'], ['chi', 'チ', 'ち'], ['tsu', 'ツ', 'つ'], ['te', 'テ', 'て'], ['to', 'ト', 'と']], [['da', 'ダ', 'だ'], ['dji', 'ヂ', 'ぢ'], ['dzu', 'ヅ', 'づ'], ['de', 'デ', 'で'], ['do', 'ド', 'ど']], [['na', 'ナ', 'な'], ['ni', 'ニ', 'に'], ['nu', 'ヌ', 'ぬ'], ['ne', 'ネ', 'ね'], ['no', 'ノ', 'の']], [['ha', 'ハ', 'は'], ['hi', 'ヒ', 'ひ'], ['fu', 'フ', 'ふ'], ['he', 'ヘ', 'へ'], ['ho', 'ホ', 'ほ']], [['ba', 'バ', 'ば'], ['bi', 'ビ', 'び'], ['bu', 'ブ', 'ぶ'], ['be', 'ベ', 'べ'], ['bo', 'ボ', 'ぼ']], [['pa', 'パ', 'ぱ'], ['pi', 'ピ', 'ぴ'], ['pu', 'プ', 'ぷ'], ['pe', 'ペ', 'ぺ'], ['po', 'ポ', 'ぽ']], [['ma', 'マ', 'ま'], ['mi', 'ミ', 'み'], ['mu', 'ム', 'む'], ['me', 'メ', 'め'], ['mo', 'モ', 'も']], [['ya', 'ヤ', 'や'], ['yu', 'ユ', 'ゆ'], ['yo', 'ヨ', 'よ']], [['ra', 'ラ', 'ら'], ['ri', 'リ', 'り'], ['ru', 'ル', 'る'], ['re', 'レ', 'れ'], ['ro', 'ロ', 'ろ']], [['wa', 'ワ', 'わ'], ['wo', 'ヲ', 'を'], ['n', 'ン', 'ん']]];
+
+        const tableUtils = {
+            showAll: () => {
+                document.querySelectorAll('#table-container [type=checkbox]').forEach(el=>{
+                    el.checked=true;
+                    el.onchange();
+                });
+            },
+            hideAll: () => {
+                document.querySelectorAll('#table-container [type=checkbox]').forEach(el=>{
+                    el.checked=false;
+                    el.onchange();
+                });
+            },
+            toggleRow: (checked, row) => {
+                const rowList = document.querySelectorAll(`.kana-row`)[+row];
+                [...rowList.querySelectorAll('.kana-cell')].map(cell => {
+                    if (checked) {
+                        cell.classList.add('active');
+                    } else {
+                        cell.classList.remove('active');
+                    }
+                });
+            },
+            toggleActive : (el) => {
+                el.classList.toggle('active');
+                const total = el.parentNode.querySelectorAll('.kana-cell').length;
+                const active = el.parentNode.querySelectorAll('.active').length;
+                if (total === active) {
+                    el.parentNode.querySelector('[type=checkbox]').checked = true;
+                }
+                if (active === 0) {
+                    el.parentNode.querySelector('[type=checkbox]').checked = false;
+                }
+            }
+        };
+
+        function isEquivalent(a, b) {
+            for (let group of kana) {
+                for (let k of group) {
+                    if (k.includes(a) && k.includes(b)) return true;
+                }
+            }
+            return false;
+        }
+
+        function renderTable() {
+            const output = [];
+            let row = 0;
+            let n = 0;
+            for (let group of kana) {
+                const openingTag = `<span onclick="tableUtils.toggleActive(this)" class="kana-cell"">`;
+                output.push(`<div data-row="${row}" class="kana-row"><input onchange="tableUtils.toggleRow(this.checked, this.parentNode.dataset.row)" type="checkbox"/>${openingTag}` + group.map(i=>`<span class="romaji">${i[0]}</span><span class="katakana">${i[1]}</span><span class="hiragana">${i[2]}</span>`).join(`</span>${openingTag}`) + '</span></div>')
+                row++;
+            }
+            table.innerHTML = output.join('');
+        }
+
+        renderTable();
+        tableUtils.showAll();
+
+        select.onchange = (ev) => {
+            document.querySelector('#table-container').className = ["romaji", "katakana", "hiragana","kana"][parseInt(ev.target.value)];
+        };
+        let queueIndex = 0;
+        function game() {
+            queueIndex = 0;
+            input.value="";
+            queue = [...document.querySelectorAll('.kana-cell.active')].map(i=>i.innerText);
+            shuffle(queue);
+            showKana();
+            root.classList.remove('hide');
+            options.classList.add('hide');
+        }
+        function showKana() {
+            stagingWord.innerText = queue[queueIndex];
+        }
+        function endGame() {
+            root.classList.add('hide');
+            options.classList.remove('hide');
+        }
+        
+        function commit() {
+            if (isEquivalent(input.value.trim().toLowerCase(), queue[queueIndex].trim().toLowerCase())) {
+                alert('Certo!');
+            } else {
+                alert('Errado!');
+            }
+            input.value = "";
+            if (queueIndex === queue.length-1) {
+                alert("Acabou!");
+                endGame();
+            }
+            const nextKana = queue[++queueIndex];
+            showKana();
+        }
+        document.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter' && e.target === input) {
+                commit();
+            }
+        });
+    </script>
+
+</body>
+</html>
