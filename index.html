@@ -5,6 +5,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Japan-ez-ez</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sawarabi+Mincho&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastify-js/1.11.2/toastify.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,7 +19,7 @@
             font-size: 18pt;
         }
         button, select {
-            border: 1px solid rgb(177, 177, 177);
+            border: 1px solid rgb(189, 189, 189);
             padding: 10px;
         }
         body {
@@ -23,6 +28,7 @@
             align-items: center;
             font-family: monospace;
             margin: 10px;
+            min-height: 100vh;
         }
         .kana-row {
             display: flex;
@@ -31,9 +37,13 @@
             background: #cfcfcf;
             margin: 1px;
             flex: 1;
-            padding: 8px;
+            padding: 3px 12px;
             border-radius: 4px;
-            cursor: pointer
+            cursor: pointer;
+            text-align: center;
+        }
+        .kana-cell,  #staging-word {
+            font-family: 'Sawarabi Mincho', sans-serif;
         }
         .kana-cell.active {
             background:rgb(34, 93, 255);
@@ -87,6 +97,7 @@
         #table-container.hiragana .hiragana {
             display: inline-block;
         }
+        /*
         #table-container.kana .romaji {
             display: none;
         }
@@ -96,6 +107,7 @@
         #table-container.kana .hiragana {
             display: inline-block;
         }
+        */
         .hide {
             display: none!important;
         }
@@ -107,16 +119,25 @@
             font-size: 22pt;
         }
         #root {
-            width: 600px;
+            max-width: 600px;
         }
         #staging-word {
             text-align: center;
             font-size: 72pt;
             padding: 20px;
         }
+        #flash {
+            position: fixed;
+            top: 0;
+            height: 10px;
+            left: 0;
+            right: 0;
+            opacity: 50%;
+        }
     </style>
 </head>
 <body>
+
     <main>
         <div id="options">
             <select id="alphabet">
@@ -153,6 +174,7 @@
         const table = document.getElementById('table-container');
         const select = document.getElementById('alphabet');
         const stagingWord = document.getElementById('staging-word');
+        const flash = document.getElementById('flash');
         let queue = [];
 
         function shuffle(array) {
@@ -256,13 +278,12 @@
         
         function commit() {
             if (isEquivalent(input.value.trim().toLowerCase(), queue[queueIndex].trim().toLowerCase())) {
-                alert('Certo!');
+                flashState(true);
             } else {
-                alert('Errado!');
+                flashState(false);
             }
             input.value = "";
             if (queueIndex === queue.length-1) {
-                alert("Acabou!");
                 endGame();
             }
             const nextKana = queue[++queueIndex];
@@ -273,6 +294,26 @@
                 commit();
             }
         });
+
+        function flashState(state) {
+            if (state) {
+                Toastify({
+                    text: "Certo!",
+                    duration: 1000,
+                    style: {
+                        background: "linear-gradient(to right, #00b09b, #96c93d)",
+                    }
+                }).showToast();
+            } else {
+                Toastify({
+                    text: "Errado!",
+                    duration: 1000,
+                    style: {
+                        background: "linear-gradient(to right, rgb(238, 0, 167), rgb(255, 99, 8))",
+                    }
+                }).showToast();
+            }
+        }
     </script>
 
 </body>
