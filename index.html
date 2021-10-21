@@ -5,9 +5,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Japan-ez-ez</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sawarabi+Mincho&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastify-js/1.11.2/toastify.js"></script>
     <style>
@@ -42,9 +39,11 @@
             cursor: pointer;
             text-align: center;
         }
+        /*
         .kana-cell,  #staging-word {
             font-family: 'Sawarabi Mincho', sans-serif;
         }
+        */
         .kana-cell.active {
             background:rgb(34, 93, 255);
             color: white;
@@ -97,17 +96,6 @@
         #table-container.hiragana .hiragana {
             display: inline-block;
         }
-        /*
-        #table-container.kana .romaji {
-            display: none;
-        }
-        #table-container.kana .katakana {
-            display: inline-block;
-        }
-        #table-container.kana .hiragana {
-            display: inline-block;
-        }
-        */
         .hide {
             display: none!important;
         }
@@ -144,7 +132,6 @@
                 <option value="0">Romaji</option>
                 <option value="2">Hiragana</option>
                 <option value="1">Katakana</option>
-                <!--<option value="3">Kana</option>-->
             </select>
             <div class="buttons-wrapper">
                 <button onclick="tableUtils.showAll()">Todos</button>
@@ -161,9 +148,12 @@
             <input id="input" />
             <br/>
             <div class="buttons-wrapper">
-                <button onclick="endGame()">Parar</button>
+                <button onclick="endGame()">Sair</button>
                 <button onclick="commit()">Enviar</button>
             </div>
+        </div>
+        <div id="statistics">
+
         </div>
     </main>
 
@@ -258,11 +248,24 @@
         select.onchange = (ev) => {
             document.querySelector('#table-container').className = ["romaji", "katakana", "hiragana","kana"][parseInt(ev.target.value)];
         };
+        
         let queueIndex = 0;
+
         function game() {
+            stats = [];
             queueIndex = 0;
             input.value="";
             queue = [...document.querySelectorAll('.kana-cell.active')].map(i=>i.innerText);
+            if (queue.length === 0) {
+                Toastify({
+                    text: "Escolha primeiro!",
+                    duration: 1000,
+                    style: {
+                        background: "linear-gradient(to right, rgb(238, 0, 167), rgb(255, 99, 8))",
+                    }
+                }).showToast();
+                return false;
+            }
             shuffle(queue);
             showKana();
             root.classList.remove('hide');
