@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wanna Kana</title>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <link rel="shortcut icon" href="icon.png" type=image/x-icon>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastify-js/1.11.2/toastify.js"></script>
+    <script src="https://unpkg.com/wanakana@4.0.2/umd/wanakana.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,6 +16,24 @@
             outline: 0;
             border: 0;
             font-size: 18pt;
+        }
+        .certo {
+            background: rgb(17, 255, 124);
+        }
+        .errado {
+            background: rgb(255, 27, 27);
+            color: white;
+        }
+        tfoot td, th {
+            color: white;
+            background: black;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        tr,td,th {
+            border: 1px solid black;
+            padding: 8px;
         }
         button, select {
             border: 1px solid rgb(189, 189, 189);
@@ -111,7 +131,7 @@
         }
         #staging-word {
             text-align: center;
-            font-size: 72pt;
+            font-size: 44pt;
             padding: 20px;
         }
         #flash {
@@ -128,9 +148,16 @@
 
     <main>
         <div id="options">
+            <strong>De</strong>
             <select id="alphabet">
-                <option value="0">Romaji</option>
+                <option value="0" selected>Romaji</option>
                 <option value="2">Hiragana</option>
+                <option value="1">Katakana</option>
+            </select>
+            <strong>Para</strong>
+            <select id="target">
+                <option value="0">Romaji</option>
+                <option value="2" selected>Hiragana</option>
                 <option value="1">Katakana</option>
             </select>
             <div class="buttons-wrapper">
@@ -144,16 +171,33 @@
             </div>
         </div>
         <div id="root" class="hide">
-            <div id="staging-word"></div>
+            <div id="staging-word" onclick="reveal(this)"></div>
             <input id="input" />
             <br/>
             <div class="buttons-wrapper">
-                <button onclick="endGame()">Sair</button>
+                <button onclick="if (confirm('Abandonar jogo?')) endGame()">Sair</button>
                 <button onclick="commit()">Enviar</button>
             </div>
         </div>
-        <div id="statistics">
-
+        <div id="statistics" class="hide">
+            <table id="stats-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Disse</th>
+                        <th>Era</th>
+                    </tr>
+                </thead>
+                <tbody id="stats-table-body">
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td id="points-total" colspan="3"></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <br/>
+            <button onclick="returnToMenu()">Voltar para menu</button>
         </div>
     </main>
 
@@ -165,7 +209,32 @@
         const select = document.getElementById('alphabet');
         const stagingWord = document.getElementById('staging-word');
         const flash = document.getElementById('flash');
+        const statistics = document.getElementById('statistics');
+        const pointsTotal = document.getElementById('points-total');
+        const statsTableBody = document.getElementById('stats-table-body');
         let queue = [];
+        let wrong = 0;
+        let right = 0;
+
+        function fromToPicker() {
+            for (let el of [...document.querySelectorAll('#target option')]) {
+                el.hidden = document.querySelector('#alphabet').value === el.value;
+                document.querySelector('#target').value = document.querySelector('#target option:not([hidden])').value;
+            }
+        }
+        fromToPicker();
+
+        function reveal(el) {
+            for (let group of kana) {
+                for (let k of group) {
+                    if (k.includes(el.innerText)) {
+                        stagingWord.innerText = k.join("");
+                        input.focus();
+                        return false;
+                    }
+                }
+            }
+        }
 
         function shuffle(array) {
             var indice_atual = array.length, valor_temporario, indice_aleatorio;
@@ -221,13 +290,23 @@
             }
         };
 
-        function isEquivalent(a, b) {
-            for (let group of kana) {
-                for (let k of group) {
-                    if (k.includes(a) && k.includes(b)) return true;
-                }
+        function compare(a, b, fun) {
+            return fun(a) === b;
+        }
+
+        function isEquivalent() {
+            const targetAlphabet = document.getElementById('target').value;
+            const expected = queue[queueIndex].trim().toLowerCase();
+            const answer = input.value.trim().toLowerCase();
+            if (targetAlphabet === '0') {
+                return compare(expected, answer, wanakana.toRomaji)
             }
-            return false;
+            if (targetAlphabet === '1') {
+                return compare(expected, answer, wanakana.toKatakana)
+            }
+            if (targetAlphabet === '2') {
+                return compare(expected, answer, wanakana.toHiragana)
+            }
         }
 
         function renderTable() {
@@ -246,13 +325,18 @@
         tableUtils.showAll();
 
         select.onchange = (ev) => {
+            fromToPicker();
             document.querySelector('#table-container').className = ["romaji", "katakana", "hiragana","kana"][parseInt(ev.target.value)];
         };
         
         let queueIndex = 0;
 
         function game() {
+            wrong = 0;
+            right = 0;
             stats = [];
+            statsTableBody.innerHTML = "";
+            pointsTotal.innerHTML = "";
             queueIndex = 0;
             input.value="";
             queue = [...document.querySelectorAll('.kana-cell.active')].map(i=>i.innerText);
@@ -270,21 +354,45 @@
             showKana();
             root.classList.remove('hide');
             options.classList.add('hide');
+            input.focus();
         }
         function showKana() {
             stagingWord.innerText = queue[queueIndex];
         }
         function endGame() {
+            statistics.classList.remove('hide');
             root.classList.add('hide');
-            options.classList.remove('hide');
         }
-        
+        function returnToMenu() {
+            statistics.classList.add('hide');
+            options.classList.remove('hide');
+        }        
+
+        function addStatistics(status, expected, answered) {
+            const targetAlphabet = document.getElementById('target').value;
+            if (targetAlphabet === '0') {
+                expected = wanakana.toRomaji(expected);
+            }
+            if (targetAlphabet === '1') {
+                expected = wanakana.toKatakana(expected);
+            }
+            if (targetAlphabet === '2') {
+                expected = wanakana.toHiragana(expected);
+            }
+            statsTableBody.innerHTML += `<tr class="${status ? "certo" : "errado"}"><td>${status ? "Certo" : "Errado"}</td><td>${answered === "" ? "-" : answered}</td><td>${expected}</td></tr>`
+            pointsTotal.innerHTML = `${(parseInt(right)*100/queue.length).toFixed(2)}% de acertos`;
+        }
+
         function commit() {
-            if (isEquivalent(input.value.trim().toLowerCase(), queue[queueIndex].trim().toLowerCase())) {
+            const isCorrect = isEquivalent(input.value.trim().toLowerCase(), queue[queueIndex].trim().toLowerCase());
+            if (isCorrect) {
                 flashState(true);
+                right++;
             } else {
                 flashState(false);
+                wrong++;
             }
+            addStatistics(isCorrect, queue[queueIndex], input.value.trim().toLowerCase());
             input.value = "";
             if (queueIndex === queue.length-1) {
                 endGame();
@@ -320,4 +428,4 @@
     </script>
 
 </body>
-</html>
+</html> 
