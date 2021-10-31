@@ -8,23 +8,31 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <link rel="shortcut icon" href="icon.png" type=image/x-icon>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastify-js/1.11.2/toastify.js"></script>
-    <script src="https://unpkg.com/wanakana@4.0.2/umd/wanakana.min.js"></script>
+    <!-- modified wanakana script-->
+    <script src="wanakana.js"></script>
+    <!-- modified wanakana script-->
     <style>
         * {
             margin: 0;
             padding: 0;
             outline: 0;
             border: 0;
-            font-size: 18pt;
+            font-size: 16pt;
         }
         .certo {
             background: rgb(17, 255, 124);
+        }
+        textarea {
+            border: 1px solid black;
+            margin: 10px 0;
+            width: 100%;
+            height: 220px;
         }
         .errado {
             background: rgb(255, 27, 27);
             color: white;
         }
-        tfoot td, th {
+        th {
             color: white;
             background: black;
         }
@@ -44,7 +52,6 @@
             justify-content: center;
             align-items: center;
             font-family: monospace;
-            margin: 10px;
             min-height: 100vh;
         }
         .kana-row {
@@ -59,11 +66,6 @@
             cursor: pointer;
             text-align: center;
         }
-        /*
-        .kana-cell,  #staging-word {
-            font-family: 'Sawarabi Mincho', sans-serif;
-        }
-        */
         .kana-cell.active {
             background:rgb(34, 93, 255);
             color: white;
@@ -186,16 +188,13 @@
                         <th>Status</th>
                         <th>Disse</th>
                         <th>Era</th>
+                        <th>Tempo</th>
                     </tr>
                 </thead>
                 <tbody id="stats-table-body">
                 </tbody>
-                <tfoot>
-                    <tr>
-                        <td id="points-total" colspan="3"></td>
-                    </tr>
-                </tfoot>
             </table>
+            <textarea id="results"></textarea>
             <br/>
             <button onclick="returnToMenu()">Voltar para menu</button>
         </div>
@@ -210,7 +209,6 @@
         const stagingWord = document.getElementById('staging-word');
         const flash = document.getElementById('flash');
         const statistics = document.getElementById('statistics');
-        const pointsTotal = document.getElementById('points-total');
         const statsTableBody = document.getElementById('stats-table-body');
         let queue = [];
         let wrong = 0;
@@ -299,13 +297,13 @@
             const expected = queue[queueIndex].trim().toLowerCase();
             const answer = input.value.trim().toLowerCase();
             if (targetAlphabet === '0') {
-                return compare(expected, answer, wanakana.toRomaji)
+                return compare(expected, answer, (x) => wanakana.toRomaji(x));
             }
             if (targetAlphabet === '1') {
-                return compare(expected, answer, wanakana.toKatakana)
+                return compare(expected, answer, (x) => wanakana.toKana(x.toUpperCase()));
             }
             if (targetAlphabet === '2') {
-                return compare(expected, answer, wanakana.toHiragana)
+                return compare(expected, answer, (x) => wanakana.toKana(x.toLowerCase()));
             }
         }
 
@@ -331,12 +329,15 @@
         
         let queueIndex = 0;
 
+        let times = [];
+
         function game() {
+            computedTimes = [];
+            times = [+new Date()];
             wrong = 0;
             right = 0;
             stats = [];
             statsTableBody.innerHTML = "";
-            pointsTotal.innerHTML = "";
             queueIndex = 0;
             input.value="";
             queue = [...document.querySelectorAll('.kana-cell.active')].map(i=>i.innerText);
@@ -359,14 +360,37 @@
         function showKana() {
             stagingWord.innerText = queue[queueIndex];
         }
+
+        const zip = (...arrays) => {
+            const length = Math.min(...arrays.map(arr => arr.length));
+            return Array.from({ length }, (value, index) => arrays.map((array => array[index])));
+        };
+
+        function compute(times) {
+            return zip(times, times.slice(1)).map((a) => (a[1]-a[0])/1000);
+        }
+
+        let computedTimes = [];
+
         function endGame() {
+            computedTimes = compute(times);
+            const sumTimes = computedTimes.reduce((a,b)=>a+b);
+            document.querySelectorAll('[data-time-index]').forEach((el, idx) => {
+                el.innerText = `${computedTimes[idx]}s`;
+            });
             statistics.classList.remove('hide');
             root.classList.add('hide');
+            document.getElementById('results').innerHTML = `${(parseInt(right)*100/queue.length).toFixed(2)}% de acertos
+Tempo total: ${(sumTimes).toFixed(2)}s
+Tempo médio: ${(sumTimes / queueIndex).toFixed(2)}s
+Tempo mínimo: ${Math.min.apply(Math, computedTimes)}
+Tempo máximo: ${Math.max.apply(Math, computedTimes)}`;
+
         }
         function returnToMenu() {
             statistics.classList.add('hide');
             options.classList.remove('hide');
-        }        
+        }
 
         function addStatistics(status, expected, answered) {
             const targetAlphabet = document.getElementById('target').value;
@@ -379,11 +403,11 @@
             if (targetAlphabet === '2') {
                 expected = wanakana.toHiragana(expected);
             }
-            statsTableBody.innerHTML += `<tr class="${status ? "certo" : "errado"}"><td>${status ? "Certo" : "Errado"}</td><td>${answered === "" ? "-" : answered}</td><td>${expected}</td></tr>`
-            pointsTotal.innerHTML = `${(parseInt(right)*100/queue.length).toFixed(2)}% de acertos`;
+            statsTableBody.innerHTML += `<tr class="${status ? "certo" : "errado"}"><td>${status ? "Certo" : "Errado"}</td><td>${answered === "" ? "-" : answered}</td><td>${expected}</td><td data-time-index="${queueIndex}"></td></tr>`
         }
 
         function commit() {
+            times.push(+new Date());
             const isCorrect = isEquivalent(input.value.trim().toLowerCase(), queue[queueIndex].trim().toLowerCase());
             if (isCorrect) {
                 flashState(true);
