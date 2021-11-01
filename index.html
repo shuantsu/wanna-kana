@@ -237,18 +237,10 @@
         function reveal(el) {
             if (dica) { return false};
             dica = true;
-            const ex = el.innerText.trim();
-            const targetAlphabet = document.getElementById('target').value;
-            if (targetAlphabet === '0') {
-                expected = wanakana.toRomaji(ex);
-            }
-            if (targetAlphabet === '1') {
-                expected = wanakana.toKatakana(ex);
-            }
-            if (targetAlphabet === '2') {
-                expected = wanakana.toHiragana(ex);
-            }
-            stagingWord.innerText = expected;
+            const staging = el.innerText.trim();
+            const to = parseInt(document.getElementById('target').value);
+            const from = parseInt(document.getElementById('alphabet').value);
+            stagingWord.innerText = smartTransform(staging, from, to);
             input.focus();
             return false;
         }
