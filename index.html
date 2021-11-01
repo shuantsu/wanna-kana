@@ -188,7 +188,7 @@
                 <thead>
                     <tr>
                         <th>Status</th>
-                        <th>Disse</th>
+                        <th>Respondeu</th>
                         <th>Era</th>
                         <th>Tempo</th>
                     </tr>
@@ -225,16 +225,21 @@
         fromToPicker();
 
         function reveal(el) {
+            if (dica) { return false};
             dica = true;
-            for (let group of kana) {
-                for (let k of group) {
-                    if (k.includes(el.innerText)) {
-                        stagingWord.innerText = k.join("");
-                        input.focus();
-                        return false;
-                    }
-                }
+            const targetAlphabet = document.getElementById('target').value;
+            if (targetAlphabet === '0') {
+                expected = wanakana.toRomaji(el.innerText);
             }
+            if (targetAlphabet === '1') {
+                expected = wanakana.toKatakana(el.innerText);
+            }
+            if (targetAlphabet === '2') {
+                expected = wanakana.toHiragana(el.innerText);
+            }
+            stagingWord.innerText = expected;
+            input.focus();
+            return false;
         }
 
         function shuffle(array) {
@@ -379,7 +384,7 @@
         let computedTimes = [];
 
         function endGame() {
-            if (right+wrong === 0) {
+            if (right + wrong === 0) {
                 options.classList.remove('hide');
                 root.classList.add('hide');
                 return false;
@@ -395,9 +400,9 @@
             const average = queueIndex > 1 ? `Tempo médio: ${(sumTimes / queueIndex).toFixed(2)}s` : '';
             document.getElementById('results').innerHTML = `Feitos: ${right+wrong}/${queue.length} (${((right+wrong)*100/(queue.length)).toFixed(2)}%)
 Acertos: ${(right)}/${queue.length} (${(parseInt(right)*100/(queue.length)).toFixed(2)}%)
-Tempo total: ${sumTimes !== null ? sumTimes : 0}s
-Tempo mínimo: ${Math.min.apply(Math, computedTimes)}s
-Tempo máximo: ${Math.max.apply(Math, computedTimes)}s
+Tempo total: ${(sumTimes !== null ? sumTimes : 0).toFixed(3)}s
+Tempo mínimo: ${Math.min.apply(Math, computedTimes).toFixed(3)}s
+Tempo máximo: ${Math.max.apply(Math, computedTimes).toFixed(3)}s
 ${average}`;
 
         }
@@ -423,7 +428,7 @@ ${average}`;
         function commit() {
             times.push(+new Date());
             const isCorrect = isEquivalent(input.value.trim().toLowerCase(), queue[queueIndex].trim().toLowerCase());
-            if (isCorrect) {
+            if (isCorrect && !dica) {
                 flashState(true);
                 right++;
             } else {
@@ -456,7 +461,7 @@ ${average}`;
                 }).showToast();
             } else {
                 Toastify({
-                    text: "Errado!",
+                    text: "Errado / Usou dica",
                     duration: 1000,
                     style: {
                         background: "linear-gradient(to right, rgb(238, 0, 167), rgb(255, 99, 8))",
