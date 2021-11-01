@@ -271,10 +271,10 @@
             romajiToKatakana: {},
             romajiToHiragana: {},
         };
-        for (group of kana) {
-            for (k of group) {
-                for (from of [0,1,2]) {
-                    for (to of [0,1,2]) {
+        for (let group of kana) {
+            for (let k of group) {
+                for (let from of [0,1,2]) {
+                    for (let to of [0,1,2]) {
                         if (from !== to) {
                             // 0 = romaji
                             // 1 = katakana
