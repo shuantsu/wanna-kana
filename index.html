@@ -11,6 +11,8 @@
     <!-- modified wanakana script-->
     <script src="wanakana.js"></script>
     <!-- modified wanakana script-->
+    <link rel="stylesheet" type="text/css" href="sortable.min.css">
+    <script src="sortable.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -19,18 +21,18 @@
             border: 0;
             font-size: 16pt;
         }
-        .certo {
-            background: rgb(17, 255, 124);
-        }
         textarea {
             border: 1px solid black;
             margin: 10px 0;
             width: 100%;
             height: 220px;
         }
+        .certo {
+            background: rgb(17, 255, 124)!important;
+        }
         .errado {
-            background: rgb(255, 27, 27);
-            color: white;
+            background: rgb(255, 27, 27)!important;
+            color: white!important;
         }
         th {
             color: white;
@@ -169,7 +171,7 @@
             <div id="table-container" class="romaji">
             </div>
             <div class="buttons-wrapper">
-                <button onclick="new game()">Treinar!</button>
+                <button onclick="game()">Treinar!</button>
             </div>
         </div>
         <div id="root" class="hide">
@@ -182,7 +184,7 @@
             </div>
         </div>
         <div id="statistics" class="hide">
-            <table id="stats-table">
+            <table id="stats-table" class='sortable'>
                 <thead>
                     <tr>
                         <th>Status</th>
@@ -223,6 +225,7 @@
         fromToPicker();
 
         function reveal(el) {
+            dica = true;
             for (let group of kana) {
                 for (let k of group) {
                     if (k.includes(el.innerText)) {
@@ -331,7 +334,10 @@
 
         let times = [];
 
+        let dica;
+
         function game() {
+            dica = false;
             computedTimes = [];
             times = [+new Date()];
             wrong = 0;
@@ -373,18 +379,26 @@
         let computedTimes = [];
 
         function endGame() {
+            if (right+wrong === 0) {
+                options.classList.remove('hide');
+                root.classList.add('hide');
+                return false;
+            }
             computedTimes = compute(times);
-            const sumTimes = computedTimes.reduce((a,b)=>a+b);
+            const sumTimes = computedTimes.reduce((a,b)=>a+b, null);
             document.querySelectorAll('[data-time-index]').forEach((el, idx) => {
                 el.innerText = `${computedTimes[idx]}s`;
+                el.dataset.sort = computedTimes[idx];
             });
             statistics.classList.remove('hide');
             root.classList.add('hide');
-            document.getElementById('results').innerHTML = `${(parseInt(right)*100/queue.length).toFixed(2)}% de acertos
-Tempo total: ${(sumTimes).toFixed(2)}s
-Tempo médio: ${(sumTimes / queueIndex).toFixed(2)}s
-Tempo mínimo: ${Math.min.apply(Math, computedTimes)}
-Tempo máximo: ${Math.max.apply(Math, computedTimes)}`;
+            const average = queueIndex > 1 ? `Tempo médio: ${(sumTimes / queueIndex).toFixed(2)}s` : '';
+            document.getElementById('results').innerHTML = `Feitos: ${right+wrong}/${queue.length} (${((right+wrong)*100/(queue.length)).toFixed(2)}%)
+Acertos: ${(right)}/${queue.length} (${(parseInt(right)*100/(queue.length)).toFixed(2)}%)
+Tempo total: ${sumTimes !== null ? sumTimes : 0}s
+Tempo mínimo: ${Math.min.apply(Math, computedTimes)}s
+Tempo máximo: ${Math.max.apply(Math, computedTimes)}s
+${average}`;
 
         }
         function returnToMenu() {
@@ -392,7 +406,7 @@ Tempo máximo: ${Math.max.apply(Math, computedTimes)}`;
             options.classList.remove('hide');
         }
 
-        function addStatistics(status, expected, answered) {
+        function addStatistics(status, expected, answered, tip) {
             const targetAlphabet = document.getElementById('target').value;
             if (targetAlphabet === '0') {
                 expected = wanakana.toRomaji(expected);
@@ -403,7 +417,7 @@ Tempo máximo: ${Math.max.apply(Math, computedTimes)}`;
             if (targetAlphabet === '2') {
                 expected = wanakana.toHiragana(expected);
             }
-            statsTableBody.innerHTML += `<tr class="${status ? "certo" : "errado"}"><td>${status ? "Certo" : "Errado"}</td><td>${answered === "" ? "-" : answered}</td><td>${expected}</td><td data-time-index="${queueIndex}"></td></tr>`
+            statsTableBody.innerHTML += `<tr class="${(!dica && status) ? "certo" : "errado"}"><td>${(!dica && status) ? "Certo" : "Err/Dica"}</td><td>${answered === "" ? "-" : answered}${tip ? "(*)" : ""}</td><td>${expected}</td><td data-time-index="${queueIndex}"></td></tr>`
         }
 
         function commit() {
@@ -416,13 +430,14 @@ Tempo máximo: ${Math.max.apply(Math, computedTimes)}`;
                 flashState(false);
                 wrong++;
             }
-            addStatistics(isCorrect, queue[queueIndex], input.value.trim().toLowerCase());
+            addStatistics(isCorrect, queue[queueIndex], input.value.trim().toLowerCase(), dica);
             input.value = "";
             if (queueIndex === queue.length-1) {
                 endGame();
             }
             const nextKana = queue[++queueIndex];
             showKana();
+            dica = false;
         }
         document.addEventListener('keyup', function(e) {
             if (e.key === 'Enter' && e.target === input) {
