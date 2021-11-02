@@ -117,16 +117,16 @@
         #table-container.hiragana .hiragana {
             display: inline-block;
         }
+        /*
         .hide {
             display: none!important;
         }
-        /*
+        */
         main {
             display: flex;
             gap: 20px;
             flex-direction: row;
         }
-        */
         #input {
             border: 1px dashed darkslateblue;
             display: block;
@@ -208,7 +208,9 @@
             </div>
             <textarea id="results"></textarea>
             <br/>
-            <button onclick="returnToMenu()">Voltar para menu</button>
+            <div style="text-align: center;">
+                <button onclick="returnToMenu()">Voltar para menu</button>
+            </div>
         </div>
     </main>
 
@@ -221,7 +223,6 @@
         const stagingWord = document.getElementById('staging-word');
         const flash = document.getElementById('flash');
         const statistics = document.getElementById('statistics');
-        const statsTableBody = document.getElementById('stats-table-body');
         let queue = [];
         let wrong = 0;
         let right = 0;
@@ -398,13 +399,17 @@
         let dica;
 
         function game() {
+            const currentSortedTh = document.querySelector('.sortable th.dir-d,.sortable th.dir-u');
+            if (currentSortedTh) {
+                currentSortedTh.classList.value="";
+            }
             dica = false;
             computedTimes = [];
             times = [+new Date()];
             wrong = 0;
             right = 0;
             stats = [];
-            statsTableBody.innerHTML = "";
+            document.getElementById('stats-table-body').innerHTML = "";
             queueIndex = 0;
             input.value="";
             queue = [...document.querySelectorAll('.kana-cell.active')].map(i=>i.innerText);
@@ -473,7 +478,7 @@ Tempo máximo: ${Math.max.apply(Math, computedTimes).toFixed(3)}s`;
             const from = parseInt(document.getElementById('alphabet').value);
             const answer = input.value.trim().toLowerCase();
             expected = smartTransform(expected, from, to);
-            statsTableBody.innerHTML += `<tr class="${(!dica && status) ? "certo" : "errado"}"><td>${(!dica && status) ? "Certo" : "Err/Dica"}</td><td>${answered === "" ? "-" : answered}${tip ? "(*)" : ""}</td><td>${expected}</td><td data-time-index="${queueIndex}"></td></tr>`
+            document.getElementById('stats-table-body').innerHTML += `<tr class="${(!dica && status) ? "certo" : "errado"}"><td>${(!dica && status) ? "Certo" : "Err/Dica"}</td><td>${answered === "" ? "-" : answered}${tip ? "(*)" : ""}</td><td>${expected}</td><td data-time-index="${queueIndex}"></td></tr>`
         }
 
         function commit() {
