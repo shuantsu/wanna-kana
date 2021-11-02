@@ -18,11 +18,20 @@
             border: 0;
             font-size: 16pt;
         }
+        input::-webkit-input-placeholder {
+            font-size: 12pt;
+            line-height: 12pt;
+        }
+        #kanas-left {
+            font-size: 10pt;
+            color: rgb(97, 97, 97);
+            margin-bottom: 12px;
+        }
         textarea {
             border: 1px solid black;
             margin: 10px 0;
             width: 100%;
-            height: 220px;
+            height: 240px;
         }
         .certo {
             background: rgb(17, 255, 124)!important;
@@ -117,16 +126,17 @@
         #table-container.hiragana .hiragana {
             display: inline-block;
         }
-        /*
         .hide {
             display: none!important;
         }
-        */
+        
+        /*
         main {
             display: flex;
             gap: 20px;
             flex-direction: row;
         }
+        */
         #input {
             border: 1px dashed darkslateblue;
             display: block;
@@ -186,6 +196,7 @@
             <div id="staging-word" onclick="reveal(this)"></div>
             <input id="input" />
             <br/>
+            <div id="kanas-left"></div>
             <div class="buttons-wrapper">
                 <button onclick="if (confirm('Abandonar jogo?')) endGame()">Sair</button>
                 <button onclick="commit()">Enviar</button>
@@ -398,11 +409,20 @@
 
         let dica;
 
+        function nextKanaCount() {
+            document.getElementById('kanas-left').innerHTML = `${right+wrong+1}/${queue.length}`;
+        }
+
         function game() {
+            arrRightWrong = [];
             const currentSortedTh = document.querySelector('.sortable th.dir-d,.sortable th.dir-u');
             if (currentSortedTh) {
                 currentSortedTh.classList.value="";
             }
+            const to = parseInt(document.getElementById('target').value);
+            const from = parseInt(document.getElementById('alphabet').value);
+            const alphabets = ["Romaji", "Katakana", "Hiragana"];
+            input.placeholder = `De: ${alphabets[parseInt(from)]} - Para: ${alphabets[parseInt(to)]}`;
             dica = false;
             computedTimes = [];
             times = [+new Date()];
@@ -428,6 +448,7 @@
             root.classList.remove('hide');
             options.classList.add('hide');
             input.focus();
+            nextKanaCount();
         }
         function showKana() {
             stagingWord.innerText = queue[queueIndex];
@@ -451,27 +472,35 @@
                 return false;
             }
             computedTimes = compute(times);
-            const sumTimes = computedTimes.reduce((a,b)=>a+b, null);
+            const computedTimesRW = zip(computedTimes, arrRightWrong);
+            const rightTimes = computedTimesRW.filter(i=>i[1]===1).map(i=>i[0]);
+            const sumTimes = rightTimes.reduce((a,b)=>a+b, null);
             document.querySelectorAll('[data-time-index]').forEach((el, idx) => {
                 el.innerText = `${computedTimes[idx]}s`;
                 el.dataset.sort = computedTimes[idx];
             });
             statistics.classList.remove('hide');
             root.classList.add('hide');
+            let details = '';
+            if (rightTimes.length !== 0) {
+                details = `
+Tempo mínimo: ${Math.min.apply(Math, rightTimes).toFixed(3)}s
+Tempo máximo: ${Math.max.apply(Math, rightTimes).toFixed(3)}s`;
+            }
             document.getElementById('results').innerHTML = `Feitos: ${right+wrong}/${queue.length} (${((right+wrong)*100/(queue.length)).toFixed(2)}%)
-Acertos: ${(right)}/${queue.length} (${(parseInt(right)*100/(queue.length)).toFixed(2)}%)
+Acertos total: ${(right)}/${queue.length} (${(parseInt(right)*100/(queue.length)).toFixed(2)}%)
+Acertos parcial: ${(right)}/${right+wrong} (${(parseInt(right)*100/(right+wrong)).toFixed(2)}%)
 
 Tempo médio: ${(sumTimes / (wrong+right)).toFixed(3)}s
 Tempo total: ${(sumTimes !== null ? sumTimes : 0).toFixed(3)}s
-
-Tempo mínimo: ${Math.min.apply(Math, computedTimes).toFixed(3)}s
-Tempo máximo: ${Math.max.apply(Math, computedTimes).toFixed(3)}s`;
-
+${details}`;
         }
         function returnToMenu() {
             statistics.classList.add('hide');
             options.classList.remove('hide');
         }
+
+        let arrRightWrong = [];
 
         function addStatistics(status, expected, answered, tip) {
             const to = parseInt(document.getElementById('target').value);
@@ -485,12 +514,15 @@ Tempo máximo: ${Math.max.apply(Math, computedTimes).toFixed(3)}s`;
             times.push(+new Date());
             const isCorrect = isEquivalent(input.value.trim().toLowerCase(), queue[queueIndex].trim().toLowerCase());
             if (isCorrect && !dica) {
+                arrRightWrong.push(1);
                 flashState(true);
                 right++;
             } else {
+                arrRightWrong.push(0);
                 flashState(false);
                 wrong++;
             }
+            nextKanaCount()
             addStatistics(isCorrect, queue[queueIndex], input.value.trim().toLowerCase(), dica);
             input.value = "";
             if (queueIndex === queue.length-1) {
@@ -528,4 +560,4 @@ Tempo máximo: ${Math.max.apply(Math, computedTimes).toFixed(3)}s`;
     </script>
 
 </body>
-</html> 
+</html>
