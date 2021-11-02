@@ -22,10 +22,14 @@
             font-size: 12pt;
             line-height: 12pt;
         }
-        #kanas-left {
-            font-size: 10pt;
+        .info {
             color: rgb(97, 97, 97);
-            margin-bottom: 12px;
+            clear: both;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        .info span {
+            font-size: 10pt;
         }
         textarea {
             border: 1px solid black;
@@ -61,6 +65,7 @@
             align-items: center;
             font-family: monospace;
             min-height: 100vh;
+            margin: 8px;
         }
         .kana-row {
             display: flex;
@@ -172,9 +177,9 @@
         <div id="options">
             <strong>De</strong>
             <select id="alphabet">
-                <option value="0" selected>Romaji</option>
-                <option value="2">Hiragana</option>
+                <option value="2" selected>Hiragana</option>
                 <option value="1">Katakana</option>
+                <option value="0">Romaji</option>
             </select>
             <strong>Para</strong>
             <select id="target">
@@ -186,7 +191,7 @@
                 <button onclick="tableUtils.showAll()">Todos</button>
                 <button onclick="tableUtils.hideAll()">Nenhum</button>
             </div>
-            <div id="table-container" class="romaji">
+            <div id="table-container" class="hiragana">
             </div>
             <div class="buttons-wrapper">
                 <button onclick="game()">Treinar!</button>
@@ -195,11 +200,15 @@
         <div id="root" class="hide">
             <div id="staging-word" onclick="reveal(this)"></div>
             <input id="input" />
-            <br/>
-            <div id="kanas-left"></div>
+            <div class="info">
+                <span id="kanas-left"></span>
+            </div>
             <div class="buttons-wrapper">
                 <button onclick="if (confirm('Abandonar jogo?')) endGame()">Sair</button>
                 <button onclick="commit()">Enviar</button>
+            </div>
+            <div class="info">
+                <span>Clique no caractere para mostrar resposta (Perde pontos)</span>
             </div>
         </div>
         <div id="statistics" class="hide">
@@ -238,6 +247,22 @@
         let wrong = 0;
         let right = 0;
 
+        function prettifySeconds(seconds) {
+            const date = new Date(null);
+            date.setSeconds(seconds);
+            const rest = seconds - Math.floor(seconds);
+            let result = date.toISOString().substr(11, 8);
+            if (rest) result += '.' + (rest).toFixed(3).split('.')[1];
+            const [h,m,s] = result.split(':');
+            if (h === "00") {
+                if (m === "00") {
+                    return s;
+                }
+                return m + ':' + s;
+            }
+            return result;
+        }
+
         function fromToPicker() {
             for (let el of [...document.querySelectorAll('#target option')]) {
                 el.hidden = document.querySelector('#alphabet').value === el.value;
@@ -273,7 +298,23 @@
             return array;
         }
 
-        const kana = [[['a', 'ア', 'あ'], ['i', 'イ', 'い'], ['u', 'ウ', 'う'], ['e', 'エ', 'え'], ['o', 'オ', 'お']], [['ka', 'カ', 'か'], ['ki', 'キ', 'き'], ['ku', 'ク', 'く'], ['ke', 'ケ', 'け'], ['ko', 'コ', 'こ']], [['ga', 'ガ', 'が'], ['gi', 'ギ', 'ぎ'], ['gu', 'グ', 'ぐ'], ['ge', 'ゲ', 'げ'], ['go', 'ゴ', 'ご']], [['sa', 'サ', 'さ'], ['shi', 'シ', 'し'], ['su', 'ス', 'す'], ['se', 'セ', 'せ'], ['so', 'ソ', 'そ']], [['za', 'ザ', 'ざ'], ['ji', 'ジ', 'じ'], ['zu', 'ズ', 'ず'], ['ze', 'ゼ', 'ぜ'], ['zo', 'ゾ', 'ぞ']], [['ta', 'タ', 'た'], ['chi', 'チ', 'ち'], ['tsu', 'ツ', 'つ'], ['te', 'テ', 'て'], ['to', 'ト', 'と']], [['da', 'ダ', 'だ'], ['dji', 'ヂ', 'ぢ'], ['dzu', 'ヅ', 'づ'], ['de', 'デ', 'で'], ['do', 'ド', 'ど']], [['na', 'ナ', 'な'], ['ni', 'ニ', 'に'], ['nu', 'ヌ', 'ぬ'], ['ne', 'ネ', 'ね'], ['no', 'ノ', 'の']], [['ha', 'ハ', 'は'], ['hi', 'ヒ', 'ひ'], ['fu', 'フ', 'ふ'], ['he', 'ヘ', 'へ'], ['ho', 'ホ', 'ほ']], [['ba', 'バ', 'ば'], ['bi', 'ビ', 'び'], ['bu', 'ブ', 'ぶ'], ['be', 'ベ', 'べ'], ['bo', 'ボ', 'ぼ']], [['pa', 'パ', 'ぱ'], ['pi', 'ピ', 'ぴ'], ['pu', 'プ', 'ぷ'], ['pe', 'ペ', 'ぺ'], ['po', 'ポ', 'ぽ']], [['ma', 'マ', 'ま'], ['mi', 'ミ', 'み'], ['mu', 'ム', 'む'], ['me', 'メ', 'め'], ['mo', 'モ', 'も']], [['ya', 'ヤ', 'や'], ['yu', 'ユ', 'ゆ'], ['yo', 'ヨ', 'よ']], [['ra', 'ラ', 'ら'], ['ri', 'リ', 'り'], ['ru', 'ル', 'る'], ['re', 'レ', 'れ'], ['ro', 'ロ', 'ろ']], [['wa', 'ワ', 'わ'], ['wo', 'ヲ', 'を'], ['n', 'ン', 'ん']]];
+        const kana = [
+            [['a', 'ア', 'あ'],  ['i', 'イ', 'い'],   ['u', 'ウ', 'う'],   ['e', 'エ', 'え'],  ['o', 'オ', 'お']],
+            [['ka', 'カ', 'か'], ['ki', 'キ', 'き'],  ['ku', 'ク', 'く'],  ['ke', 'ケ', 'け'], ['ko', 'コ', 'こ']],
+            [['ga', 'ガ', 'が'], ['gi', 'ギ', 'ぎ'],  ['gu', 'グ', 'ぐ'],  ['ge', 'ゲ', 'げ'], ['go', 'ゴ', 'ご']],
+            [['sa', 'サ', 'さ'], ['shi', 'シ', 'し'], ['su', 'ス', 'す'],  ['se', 'セ', 'せ'], ['so', 'ソ', 'そ']],
+            [['za', 'ザ', 'ざ'], ['ji', 'ジ', 'じ'],  ['zu', 'ズ', 'ず'],  ['ze', 'ゼ', 'ぜ'], ['zo', 'ゾ', 'ぞ']],
+            [['ta', 'タ', 'た'], ['chi', 'チ', 'ち'], ['tsu', 'ツ', 'つ'], ['te', 'テ', 'て'], ['to', 'ト', 'と']],
+            [['da', 'ダ', 'だ'], ['dji', 'ヂ', 'ぢ'], ['dzu', 'ヅ', 'づ'], ['de', 'デ', 'で'], ['do', 'ド', 'ど']],
+            [['na', 'ナ', 'な'], ['ni', 'ニ', 'に'],  ['nu', 'ヌ', 'ぬ'],  ['ne', 'ネ', 'ね'], ['no', 'ノ', 'の']],
+            [['ha', 'ハ', 'は'], ['hi', 'ヒ', 'ひ'],  ['fu', 'フ', 'ふ'],  ['he', 'ヘ', 'へ'], ['ho', 'ホ', 'ほ']],
+            [['ba', 'バ', 'ば'], ['bi', 'ビ', 'び'],  ['bu', 'ブ', 'ぶ'],  ['be', 'ベ', 'べ'], ['bo', 'ボ', 'ぼ']],
+            [['pa', 'パ', 'ぱ'], ['pi', 'ピ', 'ぴ'],  ['pu', 'プ', 'ぷ'],  ['pe', 'ペ', 'ぺ'], ['po', 'ポ', 'ぽ']],
+            [['ma', 'マ', 'ま'], ['mi', 'ミ', 'み'],  ['mu', 'ム', 'む'],  ['me', 'メ', 'め'], ['mo', 'モ', 'も']],
+            [['ya', 'ヤ', 'や'], ['yu', 'ユ', 'ゆ'],  ['yo', 'ヨ', 'よ']],
+            [['ra', 'ラ', 'ら'], ['ri', 'リ', 'り'],  ['ru', 'ル', 'る'],  ['re', 'レ', 'れ'], ['ro', 'ロ', 'ろ']],
+            [['wa', 'ワ', 'わ'], ['wo', 'ヲ', 'を'],  ['n', 'ン', 'ん']]
+        ];
 
         const transform = {
             hiraganaToRomaji: {},
@@ -471,28 +512,31 @@
                 root.classList.add('hide');
                 return false;
             }
+            if ((right + wrong) !== queue.length) {
+                times.push(+new Date());
+            }
             computedTimes = compute(times);
             const computedTimesRW = zip(computedTimes, arrRightWrong);
             const rightTimes = computedTimesRW.filter(i=>i[1]===1).map(i=>i[0]);
             const sumTimes = rightTimes.reduce((a,b)=>a+b, null);
             document.querySelectorAll('[data-time-index]').forEach((el, idx) => {
-                el.innerText = `${computedTimes[idx]}s`;
+                el.innerText = `${prettifySeconds(computedTimes[idx])}s`;
                 el.dataset.sort = computedTimes[idx];
             });
             statistics.classList.remove('hide');
             root.classList.add('hide');
             let details = '';
             if (rightTimes.length !== 0) {
-                details = `
-Tempo mínimo: ${Math.min.apply(Math, rightTimes).toFixed(3)}s
-Tempo máximo: ${Math.max.apply(Math, rightTimes).toFixed(3)}s`;
+                details = `Tempo mínimo de acertos: ${prettifySeconds(Math.min.apply(Math, rightTimes))}s
+Tempo máximo de acertos: ${prettifySeconds(Math.max.apply(Math, rightTimes))}s
+Tempo médio de acertos: ${prettifySeconds(sumTimes / (wrong+right))}s`;
             }
-            document.getElementById('results').innerHTML = `Feitos: ${right+wrong}/${queue.length} (${((right+wrong)*100/(queue.length)).toFixed(2)}%)
+            document.getElementById('results').innerHTML = `Tempo total: ${prettifySeconds(computedTimes.reduce((a,b)=>a+b, null))}s
+Feitos: ${right+wrong}/${queue.length} (${((right+wrong)*100/(queue.length)).toFixed(2)}%)
+
 Acertos total: ${(right)}/${queue.length} (${(parseInt(right)*100/(queue.length)).toFixed(2)}%)
 Acertos parcial: ${(right)}/${right+wrong} (${(parseInt(right)*100/(right+wrong)).toFixed(2)}%)
 
-Tempo médio: ${(sumTimes / (wrong+right)).toFixed(3)}s
-Tempo total: ${(sumTimes !== null ? sumTimes : 0).toFixed(3)}s
 ${details}`;
         }
         function returnToMenu() {
