@@ -87,6 +87,9 @@
         [type=checkbox] {
             cursor: pointer;
         }
+        [type=checkbox]:disabled {
+            cursor: default;
+        }
         #options {
             padding: 10px;
             border: 1px solid;
@@ -132,7 +135,8 @@
             display: inline-block;
         }
         .hide {
-            display: none!important;
+            position: absolute;
+            left: -9999999px;
         }
         
         /*
@@ -167,7 +171,7 @@
         }
         .table-wrapper {
             max-width: 100%;
-            overflow-x: auto;
+            overflo-x: auto;
         }
     </style>
 </head>
@@ -187,13 +191,14 @@
                 <option value="2" selected>Hiragana</option>
                 <option value="1">Katakana</option>
             </select>
-            <div class="buttons-wrapper">
+            <div class="buttons-wrapper" id="kana-controllers">
                 <button onclick="tableUtils.showAll()">Todos</button>
                 <button onclick="tableUtils.hideAll()">Nenhum</button>
             </div>
             <div id="table-container" class="hiragana">
             </div>
-            <div class="buttons-wrapper">
+            <div class="buttons-wrapper" id="practice-controllers" style="flex-direction: column!important;">
+                <label><input id="practice-checkbox" type="checkbox"> Treino cumulativo</label>
                 <button onclick="game()">Treinar!</button>
             </div>
         </div>
@@ -313,7 +318,19 @@
             [['ma', 'マ', 'ま'], ['mi', 'ミ', 'み'],  ['mu', 'ム', 'む'],  ['me', 'メ', 'め'], ['mo', 'モ', 'も']],
             [['ya', 'ヤ', 'や'], ['yu', 'ユ', 'ゆ'],  ['yo', 'ヨ', 'よ']],
             [['ra', 'ラ', 'ら'], ['ri', 'リ', 'り'],  ['ru', 'ル', 'る'],  ['re', 'レ', 'れ'], ['ro', 'ロ', 'ろ']],
-            [['wa', 'ワ', 'わ'], ['wo', 'ヲ', 'を'],  ['n', 'ン', 'ん']]
+            [['wa', 'ワ', 'わ'], ['wo', 'ヲ', 'を'],  ['n', 'ン', 'ん']],
+
+            [["kya", "キャ", "きゃ"], ["kyu", "キュ", "きゅ"], ["kyo", "キョ", "きょ"]], 
+            [["gya", "ギャ", "ぎゃ"], ["gyu", "ギュ", "ぎゅ"], ["gyo", "ギョ", "ぎょ"]], 
+            [["sha", "シャ", "しゃ"], ["shu", "シュ", "しゅ"], ["sho", "ショ", "しょ"]], 
+            [["ja", "ジャ", "じゃ"],  ["ju", "ジュ", "じゅ"],  ["jo", "ジョ", "じょ"]], 
+            [["cha", "チャ", "ちゃ"], ["chu", "チュ", "ちゅ"], ["cho", "チョ", "ちょ"]], 
+            [["nya", "ニャ", "にゃ"], ["nyu", "ニュ", "にゅ"], ["nyo", "ニョ", "にょ"]], 
+            [["hya", "ヒャ", "ひゃ"], ["hyu", "ヒュ", "ひゅ"], ["hyo", "ヒョ", "ひょ"]], 
+            [["bya", "ビャ", "びゃ"], ["byu", "ビュ", "びゅ"], ["byo", "ビョ", "びょ"]], 
+            [["pya", "ピャ", "ぴゃ"], ["pyu", "ピュ", "ぴゅ"], ["pyo", "ピョ", "ぴょ"]], 
+            [["mya", "ミャ", "みゃ"], ["myu", "ミュ", "みゅ"], ["myo", "ミョ", "みょ"]], 
+            [["rya", "リャ", "りゃ"], ["ryu", "リュ", "りゅ"], ["ryo", "リョ", "りょ"]]
         ];
 
         const transform = {
@@ -429,7 +446,7 @@
             let row = 0;
             let n = 0;
             for (let group of kana) {
-                const openingTag = `<span onclick="tableUtils.toggleActive(this)" class="kana-cell"">`;
+                const openingTag = `<span onclick="if (!isCumulativeTraining()) tableUtils.toggleActive(this);" class="kana-cell"">`;
                 output.push(`<div data-row="${row}" class="kana-row"><input onchange="tableUtils.toggleRow(this.checked, this.parentNode.dataset.row)" type="checkbox"/>${openingTag}` + group.map(i=>`<span class="romaji">${i[0]}</span><span class="katakana">${i[1]}</span><span class="hiragana">${i[2]}</span>`).join(`</span>${openingTag}`) + '</span></div>')
                 row++;
             }
@@ -453,6 +470,8 @@
         function nextKanaCount() {
             document.getElementById('kanas-left').innerHTML = `${right+wrong+1}/${queue.length}`;
         }
+
+        let row = 0;
 
         function game() {
             arrRightWrong = [];
@@ -514,7 +533,12 @@
             }
             if ((right + wrong) !== queue.length) {
                 times.push(+new Date());
+            } else {
+                if (isCumulativeTraining()) {
+                    tableUtils.toggleRow(true, ++row);
+                }
             }
+            
             computedTimes = compute(times);
             const computedTimesRW = zip(computedTimes, arrRightWrong);
             const rightTimes = computedTimesRW.filter(i=>i[1]===1).map(i=>i[0]);
@@ -558,6 +582,7 @@ ${details}`;
             times.push(+new Date());
             const isCorrect = isEquivalent(input.value.trim().toLowerCase(), queue[queueIndex].trim().toLowerCase());
             if (isCorrect && !dica) {
+                tableUtils.toggleActive([...document.querySelectorAll('.kana-cell')].filter(i=>i.innerText===queue[queueIndex])[0]);
                 arrRightWrong.push(1);
                 flashState(true);
                 right++;
@@ -601,6 +626,60 @@ ${details}`;
                 }).showToast();
             }
         }
+
+        const practiceCheckbox = document.getElementById('practice-checkbox');
+
+        function isCumulativeTraining() {
+            return(practiceCheckbox.checked);
+        }
+
+        let tableState;
+
+        function saveTableState() {
+            const checkboxesState = [];
+            const kanaCellsState = [];
+            table.querySelectorAll('[type=checkbox]').forEach(el=>{
+                checkboxesState.push(el.checked);
+            });
+            table.querySelectorAll('.kana-cell').forEach(el=>{
+                kanaCellsState.push(/active/.test(el.className));
+            });
+            tableState = {checkboxesState, kanaCellsState};
+        }
+
+        function loadTableState() {
+            const { checkboxesState, kanaCellsState } = tableState;
+            table.querySelectorAll('[type=checkbox]').forEach((el, idx)=>{
+                el.checked = checkboxesState[idx];
+            });
+            table.querySelectorAll('.kana-cell').forEach((el, idx)=>{
+                if (kanaCellsState[idx]) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+        }
+
+        practiceCheckbox.onchange = (ev) => {
+            ev.preventDefault();
+            if (ev.target.checked) {
+                saveTableState();
+                table.querySelectorAll('[type=checkbox]').forEach(el=>{el.disabled=true});
+                tableUtils.hideAll();
+                row = 0;
+                tableUtils.toggleRow(true, row);
+                document.querySelectorAll('#kana-controllers button').forEach(el=>el.disabled=true);
+            } else {
+                if (!confirm('Sair agora significa perder o progresso feito no treino cumulativo. Prosseguir?')){
+                    ev.target.checked = true;
+                    return false;
+                }
+                loadTableState();
+                table.querySelectorAll('[type=checkbox]').forEach(el=>{el.disabled=false});
+                document.querySelectorAll('#kana-controllers button').forEach(el=>el.disabled=false);
+            }
+        };
     </script>
 
 </body>
